@@ -192,6 +192,22 @@ body {
     display: block;
 }
 
+.pdf-viewer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+}
+
+.pdf-viewer iframe {
+    flex: 1;
+    width: 100%;
+    min-height: 500px;
+    border: 3px solid #3A3A3A;
+    border-radius: 20px;
+    background: white;
+}
+
 /* Optional Scrollbar */
 
 .details::-webkit-scrollbar {

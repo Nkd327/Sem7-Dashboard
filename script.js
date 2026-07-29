@@ -28,6 +28,13 @@ function renderSidebar() {
     });
 
     sidebar.appendChild(courseButtonsContainer);
+
+    const calendarButton = document.createElement('button');
+    calendarButton.className = 'course-btn';
+    calendarButton.dataset.view = 'calendar';
+    calendarButton.textContent = 'Calendar';
+    calendarButton.addEventListener('click', () => setActiveView('calendar'));
+    sidebar.appendChild(calendarButton);
 }
 
 function renderCourseDetails(course) {
@@ -61,6 +68,15 @@ function renderTimetableView() {
     `;
 }
 
+function renderCalendarView() {
+    detailsEl.innerHTML = `
+        <div class="pdf-viewer">
+            <h2>Acad Calendar</h2>
+            <iframe src="AcadCalendar.pdf#zoom=200" title="Academic Calendar"></iframe>
+        </div>
+    `;
+}
+
 function setActiveCourse(code) {
     const course = courseData.find((item) => item.code === code) || courseData[0];
     activeCourseCode = course.code;
@@ -81,8 +97,8 @@ function setActiveView(view) {
     const buttons = sidebar.querySelectorAll('.course-btn');
 
     buttons.forEach((button) => {
-        const isTimetableButton = button.dataset.view === 'timetable';
-        button.classList.toggle('active', isTimetableButton && view === 'timetable');
+        const isSpecial = button.dataset.view === 'timetable' || button.dataset.view === 'calendar';
+        button.classList.toggle('active', isSpecial && button.dataset.view === view);
     });
 
     if (view === 'timetable') {
@@ -90,6 +106,11 @@ function setActiveView(view) {
         courseTitleEl.textContent = 'Weekly Schedule';
         document.title = 'TimeTable';
         renderTimetableView();
+    } else if (view === 'calendar') {
+        courseNumberEl.textContent = 'Acad Calendar';
+        courseTitleEl.textContent = 'Academic Schedule';
+        document.title = 'Acad Calendar';
+        renderCalendarView();
     } else {
         setActiveCourse(activeCourseCode);
     }
