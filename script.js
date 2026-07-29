@@ -2,9 +2,20 @@ const sidebar = document.getElementById('course-sidebar');
 const courseNumberEl = document.getElementById('course-number');
 const courseTitleEl = document.getElementById('course-title');
 const detailsEl = document.getElementById('details');
+let activeCourseCode = 'CS5013';
 
-function renderCourseButtons() {
+function renderSidebar() {
     sidebar.innerHTML = '';
+
+    const timetableButton = document.createElement('button');
+    timetableButton.className = 'course-btn';
+    timetableButton.dataset.view = 'timetable';
+    timetableButton.textContent = 'TimeTable';
+    timetableButton.addEventListener('click', () => setActiveView('timetable'));
+    sidebar.appendChild(timetableButton);
+
+    const courseButtonsContainer = document.createElement('div');
+    courseButtonsContainer.className = 'course-list';
 
     courseData.forEach((course) => {
         const button = document.createElement('button');
@@ -13,8 +24,10 @@ function renderCourseButtons() {
 
         button.addEventListener('click', () => setActiveCourse(course.code));
 
-        sidebar.appendChild(button);
+        courseButtonsContainer.appendChild(button);
     });
+
+    sidebar.appendChild(courseButtonsContainer);
 }
 
 function renderCourseDetails(course) {
@@ -39,12 +52,23 @@ function renderCourseDetails(course) {
     `;
 }
 
+function renderTimetableView() {
+    detailsEl.innerHTML = `
+        <div class="image-viewer">
+            <h2>TimeTable</h2>
+            <img src="tt7-optimized.webp" alt="Timetable" loading="lazy" decoding="async" />
+        </div>
+    `;
+}
+
 function setActiveCourse(code) {
     const course = courseData.find((item) => item.code === code) || courseData[0];
+    activeCourseCode = course.code;
     const buttons = sidebar.querySelectorAll('.course-btn');
 
     buttons.forEach((button) => {
-        button.classList.toggle('active', button.textContent === course.code);
+        const isTimetableButton = button.dataset.view === 'timetable';
+        button.classList.toggle('active', isTimetableButton ? false : button.textContent.trim() === course.code);
     });
 
     courseNumberEl.textContent = course.code;
@@ -53,5 +77,23 @@ function setActiveCourse(code) {
     renderCourseDetails(course);
 }
 
-renderCourseButtons();
-setActiveCourse('CS5013');
+function setActiveView(view) {
+    const buttons = sidebar.querySelectorAll('.course-btn');
+
+    buttons.forEach((button) => {
+        const isTimetableButton = button.dataset.view === 'timetable';
+        button.classList.toggle('active', isTimetableButton && view === 'timetable');
+    });
+
+    if (view === 'timetable') {
+        courseNumberEl.textContent = 'TimeTable';
+        courseTitleEl.textContent = 'Weekly Schedule';
+        document.title = 'TimeTable';
+        renderTimetableView();
+    } else {
+        setActiveCourse(activeCourseCode);
+    }
+}
+
+renderSidebar();
+setActiveView('timetable');
