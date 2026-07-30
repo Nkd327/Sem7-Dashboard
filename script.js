@@ -56,6 +56,8 @@ function renderCourseDetails(course) {
         <ul>
             ${course.resources.map((item) => `<li>${item}</li>`).join('')}
         </ul>
+
+        ${course.courseWebsite ? `<p><a href="${course.courseWebsite}" target="_blank" rel="noopener noreferrer">Course Website</a></p>` : ''}
     `;
 }
 

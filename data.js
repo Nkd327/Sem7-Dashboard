@@ -21,10 +21,11 @@ const courseData = [
     code: 'CS5013',
     title: 'Programming with AI',
     pageTitle: 'CS5013 | Programming with AI',
-    summary: 'Focuses on building practical AI-driven applications using modern programming tools.',
+    summary: 'Focuses on building software applications using AI and modern programming tools.',
     topics: ['Python for AI', 'Data preprocessing', 'Model deployment'],
     assessments: ['Lab exercises', 'Code review', 'Capstone task'],
-    resources: ['Python notebooks', 'API docs', 'Deployment guides']
+    resources: ['Python notebooks', 'API docs', 'Deployment guides'],
+    courseWebsite: 'https://www.cse.iitm.ac.in/~krishna/cs5013/'
   },
   {
     code: 'CS6590',
