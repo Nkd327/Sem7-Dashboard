@@ -4,6 +4,8 @@ const courseTitleEl = document.getElementById('course-title');
 const detailsEl = document.getElementById('details');
 let activeCourseCode = 'CS5013';
 
+const courseData = Object.entries(courses).map(([code, course]) => ({ code, ...course }));
+
 function renderSidebar() {
     sidebar.innerHTML = '';
 
@@ -37,28 +39,125 @@ function renderSidebar() {
     sidebar.appendChild(calendarButton);
 }
 
-function renderCourseDetails(course) {
-    detailsEl.innerHTML = `
-        <h2>${course.title}</h2>
-        <p>${course.summary}</p>
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
-        <h3>Topics</h3>
-        <ul>
-            ${course.topics.map((topic) => `<li>${topic}</li>`).join('')}
-        </ul>
+function escapeAttribute(value) {
+    return escapeHtml(value);
+}
 
-        <h3>Assessments</h3>
-        <ul>
-            ${course.assessments.map((item) => `<li>${item}</li>`).join('')}
-        </ul>
-
-        <h3>Resources</h3>
-        <ul>
-            ${course.resources.map((item) => `<li>${item}</li>`).join('')}
-        </ul>
-
-        ${course.courseWebsite ? `<p><a href="${course.courseWebsite}" target="_blank" rel="noopener noreferrer">Course Website</a></p>` : ''}
+function renderDetailSection(title, content) {
+    return `
+        <section class="detail-section">
+            <h3>${escapeHtml(title)}</h3>
+            ${content}
+        </section>
     `;
+}
+
+function renderCourseDetails(course) {
+    const schedule = course.schedule || {};
+    const classes = (schedule.classes || []).filter((item) => item.day || item.startTime || item.endTime);
+    const evaluation = (course.evaluation || []).filter((item) => item.type || item.weightage !== '' && item.weightage !== null && item.weightage !== undefined || item.date);
+    const resources = (course.resources || []).filter((item) => item.title || item.link);
+
+    const sections = [];
+
+    sections.push(`<h2>${escapeHtml(course.title || '')}</h2>`);
+
+    const summaryContent = [];
+    if (course.summary) {
+        summaryContent.push(`<p>${escapeHtml(course.summary)}</p>`);
+    }
+    if (summaryContent.length) {
+        sections.push(renderDetailSection('Overview', summaryContent.join('')));
+    }
+
+    if (evaluation.length) {
+        const tableRows = evaluation.map((item) => `
+            <tr>
+                <td>${escapeHtml(item.type || '')}</td>
+                <td>${item.weightage !== '' && item.weightage !== null && item.weightage !== undefined ? escapeHtml(item.weightage) : ''}</td>
+                <td>${escapeHtml(item.date || '')}</td>
+            </tr>
+        `).join('');
+
+        sections.push(renderDetailSection('Evaluation Pattern', `
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Weightage</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        `));
+    }
+
+    const scheduleContent = [];
+    if (schedule.location) {
+        scheduleContent.push(`<p><strong>Location :</strong> ${escapeHtml(schedule.location)}</p>`);
+    }
+    if (schedule.slot) {
+        scheduleContent.push(`<p><strong>Slot :</strong> ${escapeHtml(schedule.slot)}</p>`);
+    }
+    if (classes.length) {
+        scheduleContent.push(`
+            <p><strong>Classes:</strong></p>
+            <ul class="detail-list">
+                ${classes.map((item) => {
+                    const parts = [];
+                    const dayLabel = item.day ? escapeHtml(item.day) : '';
+                    if (dayLabel) parts.push(dayLabel);
+                    const timeSlot = item.timeSlot ? escapeHtml(item.timeSlot) : '';
+                    if (timeSlot) parts.push(timeSlot);
+                    return `<li>${parts.join(', ')}</li>`;
+                }).join('')}
+            </ul>
+        `);
+    }
+    if (schedule.note) {
+        scheduleContent.push(`<p><strong>Note :</strong> ${escapeHtml(schedule.note)}</p>`);
+    }
+    if (scheduleContent.length) {
+        sections.push(renderDetailSection('Schedule', scheduleContent.join('')));
+    }
+
+    if (course.topics && course.topics.length) {
+        sections.push(renderDetailSection('Topics', `
+            <ul class="detail-list">
+                ${course.topics.map((topic) => `<li>${escapeHtml(topic)}</li>`).join('')}
+            </ul>
+        `));
+    }
+
+    if (course.courseLink) {
+        sections.push(renderDetailSection('Course Link', `
+            <p><a class="detail-link" href="${escapeAttribute(course.courseLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(course.courseLink)}</a></p>
+        `));
+    }
+
+    if (resources.length) {
+        const resourceItems = resources.map((item) => {
+            const title = item.title ? escapeHtml(item.title) : 'Resource';
+            if (item.link) {
+                return `<li>• ${title} → <a class="detail-link" href="${escapeAttribute(item.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.link)}</a></li>`;
+            }
+            return `<li>• ${title}</li>`;
+        }).join('');
+
+        sections.push(renderDetailSection('Resources', `<ul class="detail-list">${resourceItems}</ul>`));
+    }
+
+    detailsEl.innerHTML = sections.join('');
 }
 
 function renderTimetableView() {
@@ -109,9 +208,9 @@ function setActiveView(view) {
         document.title = 'TimeTable';
         renderTimetableView();
     } else if (view === 'calendar') {
-        courseNumberEl.textContent = 'Acad Calendar';
+        courseNumberEl.textContent = 'Calendar';
         courseTitleEl.textContent = 'Academic Schedule';
-        document.title = 'Acad Calendar';
+        document.title = 'Calendar';
         renderCalendarView();
     } else {
         setActiveCourse(activeCourseCode);
