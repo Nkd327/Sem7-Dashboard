@@ -5,6 +5,7 @@ const detailsEl = document.getElementById('details');
 let activeCourseCode = 'CS5013';
 
 const courseData = Object.entries(courses).map(([code, course]) => ({ code, ...course }));
+const UPCOMING_DEADLINES_URL = 'https://script.google.com/macros/s/AKfycbzSqpT-FewAIXn5sp_c_kbN02xsWWeMX42KqW3Z2Bp-1fRpg0Ua07Jfe11gp22RL2En/exec';
 
 function renderSidebar() {
     sidebar.innerHTML = '';
@@ -15,6 +16,13 @@ function renderSidebar() {
     timetableButton.textContent = 'TimeTable';
     timetableButton.addEventListener('click', () => setActiveView('timetable'));
     sidebar.appendChild(timetableButton);
+
+    const upcomingButton = document.createElement('button');
+    upcomingButton.className = 'course-btn';
+    upcomingButton.dataset.view = 'upcoming';
+    upcomingButton.textContent = 'Upcoming';
+    upcomingButton.addEventListener('click', () => setActiveView('upcoming'));
+    sidebar.appendChild(upcomingButton);
 
     const courseButtonsContainer = document.createElement('div');
     courseButtonsContainer.className = 'course-list';
@@ -59,6 +67,70 @@ function renderDetailSection(title, content) {
             ${content}
         </section>
     `;
+}
+
+function normalizeUpcomingRow(row) {
+    if (!row || typeof row !== 'object') {
+        return { date: '', courseNo: '', evaluationType: '' };
+    }
+
+    return {
+        date: row.date ?? row.Date ?? '',
+        courseNo: row.courseNo ?? row.course_no ?? row.courseCode ?? row['Course No'] ?? '',
+        evaluationType: row.evaluationType ?? row.evaluation_type ?? row.type ?? row['Evaluation Type'] ?? ''
+    };
+}
+
+async function renderUpcomingDeadlinesView() {
+    detailsEl.innerHTML = renderDetailSection('Upcoming Deadlines', '<p>Loading upcoming deadlines...</p>');
+
+    if (!UPCOMING_DEADLINES_URL) {
+        detailsEl.innerHTML = renderDetailSection('Upcoming Deadlines', '<p>Upcoming deadlines are not available yet.</p><p>Set the Google Apps Script JSON endpoint in the UPCOMING_DEADLINES_URL constant at the top of script.js.</p>');
+        return;
+    }
+
+    try {
+        const response = await fetch(UPCOMING_DEADLINES_URL);
+        if (!response.ok) {
+            throw new Error(`Request failed with status ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const rows = (Array.isArray(payload) ? payload : [])
+            .map((row) => normalizeUpcomingRow(row))
+            .filter((row) => row.date || row.courseNo || row.evaluationType);
+
+        const tableRows = rows.length
+            ? rows.map((row) => `
+                <tr>
+                    <td>${escapeHtml(row.date)}</td>
+                    <td>${escapeHtml(row.courseNo)}</td>
+                    <td>${escapeHtml(row.evaluationType)}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="3">No upcoming deadlines found yet.</td></tr>';
+
+        const content = `
+            <table class="detail-table upcoming-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Course No</th>
+                        <th>Evaluation Type</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        `;
+
+        detailsEl.innerHTML = renderDetailSection('Upcoming Deadlines', content);
+    } catch (error) {
+        console.error('Failed to load upcoming deadlines', error);
+        detailsEl.innerHTML = renderDetailSection(
+            'Upcoming Deadlines',
+            `<p>Unable to load upcoming deadlines right now.</p><p>${escapeHtml(error.message || 'Unknown error')}</p>`
+        );
+    }
 }
 
 function renderDateCell(dateValue) {
@@ -255,6 +327,11 @@ function setActiveView(view) {
         courseTitleEl.textContent = 'Academic Schedule';
         document.title = 'Calendar';
         renderCalendarView();
+    } else if (view === 'upcoming') {
+        courseNumberEl.textContent = 'Upcoming';
+        courseTitleEl.textContent = 'Upcoming Deadlines';
+        document.title = 'Upcoming Deadlines';
+        renderUpcomingDeadlinesView();
     } else {
         setActiveCourse(activeCourseCode);
     }
