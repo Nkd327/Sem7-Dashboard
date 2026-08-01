@@ -1,0 +1,12 @@
+{
+  "name": "sem7app-data-filler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive CLI to populate course data",
+  "scripts": {
+    "fill:data": "node fillData.js"
+  },
+  "dependencies": {
+    "inquirer": "^9.2.0"
+  }
+}

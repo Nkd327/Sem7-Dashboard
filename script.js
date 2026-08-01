@@ -61,46 +61,43 @@ function renderDetailSection(title, content) {
     `;
 }
 
+function renderDateCell(dateValue) {
+    if (Array.isArray(dateValue)) {
+        const items = (dateValue || []).filter((item) => item !== '' && item !== null && item !== undefined);
+        if (!items.length) {
+            return '';
+        }
+        return `<ul class="detail-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+    }
+
+    return escapeHtml(dateValue || '');
+}
+
 function renderCourseDetails(course) {
     const schedule = course.schedule || {};
     const classes = (schedule.classes || []).filter((item) => item.day || item.startTime || item.endTime);
     const evaluation = (course.evaluation || []).filter((item) => item.type || item.weightage !== '' && item.weightage !== null && item.weightage !== undefined || item.date);
-    const resources = (course.resources || []).filter((item) => item.title || item.link);
-
-    const sections = [];
-
-    sections.push(`<h2>${escapeHtml(course.title || '')}</h2>`);
+    const resourceItems = (course.resources || []).filter((item) => item.title || item.link);
+    const resources = course.courseLink
+        ? [...resourceItems, { title: 'Course link', link: course.courseLink }]
+        : resourceItems;
 
     const summaryContent = [];
     if (course.summary) {
         summaryContent.push(`<p>${escapeHtml(course.summary)}</p>`);
     }
-    if (summaryContent.length) {
-        sections.push(renderDetailSection('Overview', summaryContent.join('')));
+    if (course.topics && course.topics.length) {
+        summaryContent.push(`
+            <h4>Topics</h4>
+            <ul class="detail-list">
+                ${course.topics.map((topic) => `<li>${escapeHtml(topic)}</li>`).join('')}
+            </ul>
+        `);
     }
 
-    if (evaluation.length) {
-        const tableRows = evaluation.map((item) => `
-            <tr>
-                <td>${escapeHtml(item.type || '')}</td>
-                <td>${item.weightage !== '' && item.weightage !== null && item.weightage !== undefined ? escapeHtml(item.weightage) : ''}</td>
-                <td>${escapeHtml(item.date || '')}</td>
-            </tr>
-        `).join('');
-
-        sections.push(renderDetailSection('Evaluation Pattern', `
-            <table class="detail-table">
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Weightage</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>${tableRows}</tbody>
-            </table>
-        `));
-    }
+    const overviewSection = summaryContent.length
+        ? renderDetailSection('Overview', summaryContent.join(''))
+        : renderDetailSection('Overview', '<p>No overview available.</p>');
 
     const scheduleContent = [];
     if (schedule.location) {
@@ -127,37 +124,83 @@ function renderCourseDetails(course) {
     if (schedule.note) {
         scheduleContent.push(`<p><strong>Note :</strong> ${escapeHtml(schedule.note)}</p>`);
     }
-    if (scheduleContent.length) {
-        sections.push(renderDetailSection('Schedule', scheduleContent.join('')));
+
+    const scheduleSection = scheduleContent.length
+        ? renderDetailSection('Schedule', scheduleContent.join(''))
+        : renderDetailSection('Schedule', '<p>No schedule information available.</p>');
+
+    let evaluationSection = renderDetailSection('Evaluation Pattern', '<p>No evaluation information available.</p>');
+    if (evaluation.length) {
+        const tableRows = evaluation.map((item) => `
+            <tr>
+                <td>${escapeHtml(item.type || '')}</td>
+                <td>${item.weightage !== '' && item.weightage !== null && item.weightage !== undefined ? escapeHtml(item.weightage) : ''}</td>
+                <td>${renderDateCell(item.date)}</td>
+            </tr>
+        `).join('');
+
+        evaluationSection = renderDetailSection('Evaluation Pattern', `
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Weightage</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        `);
     }
 
-    if (course.topics && course.topics.length) {
-        sections.push(renderDetailSection('Topics', `
-            <ul class="detail-list">
-                ${course.topics.map((topic) => `<li>${escapeHtml(topic)}</li>`).join('')}
-            </ul>
-        `));
-    }
-
-    if (course.courseLink) {
-        sections.push(renderDetailSection('Course Link', `
-            <p><a class="detail-link" href="${escapeAttribute(course.courseLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(course.courseLink)}</a></p>
-        `));
-    }
-
+    let resourcesSection = renderDetailSection('Resources', '<p>No resources available.</p>');
     if (resources.length) {
         const resourceItems = resources.map((item) => {
             const title = item.title ? escapeHtml(item.title) : 'Resource';
             if (item.link) {
-                return `<li>• ${title} → <a class="detail-link" href="${escapeAttribute(item.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.link)}</a></li>`;
+                return `<li><a class="detail-link" href="${escapeAttribute(item.link)}" target="_blank" rel="noopener noreferrer">${title}</a></li>`;
             }
-            return `<li>• ${title}</li>`;
+            return `<li>${title}</li>`;
         }).join('');
 
-        sections.push(renderDetailSection('Resources', `<ul class="detail-list">${resourceItems}</ul>`));
+        resourcesSection = renderDetailSection('Resources', `<ul class="detail-list">${resourceItems}</ul>`);
     }
 
-    detailsEl.innerHTML = sections.join('');
+    const sections = {
+        overview: overviewSection,
+        schedule: scheduleSection,
+        evaluation: evaluationSection,
+        resources: resourcesSection
+    };
+
+    detailsEl.innerHTML = `
+        <div class="detail-tabs-wrapper">
+            <div class="detail-tabs" role="tablist" aria-label="Course details sections">
+                <button class="detail-tab" data-tab="overview" role="tab" aria-selected="false">Overview</button>
+                <button class="detail-tab" data-tab="schedule" role="tab" aria-selected="false">Schedule</button>
+                <button class="detail-tab active" data-tab="evaluation" role="tab" aria-selected="true">Evaluation</button>
+                <button class="detail-tab" data-tab="resources" role="tab" aria-selected="false">Resources</button>
+            </div>
+            <div class="detail-panel" id="detail-panel">${sections.evaluation}</div>
+        </div>
+    `;
+
+    const tabButtons = detailsEl.querySelectorAll('.detail-tab');
+    const panel = detailsEl.querySelector('.detail-panel');
+
+    tabButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const selectedTab = button.dataset.tab;
+
+            tabButtons.forEach((tab) => {
+                const isActive = tab === button;
+                tab.classList.toggle('active', isActive);
+                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+
+            panel.innerHTML = sections[selectedTab] || sections.overview;
+        });
+    });
 }
 
 function renderTimetableView() {
